@@ -1,0 +1,50 @@
+{{left_sidebar_enabled,right_sidebar_enabled=False,('message' in globals())}}
+{{extend 'layout.html'}}
+<center>
+     <a href="index"> All    |   
+{{ for x in cate:}}
+<a href="home?a={{=x['cat']}}"> {{=x['cat']}}       |  </a>
+{{pass}}
+    </center>
+    <br/><br/>
+<ol>
+{{for p in posts:}}
+ 
+     <li> 
+           <b><a href="{{=(p['link'])}}"> {{=p['heading']}} </a> </b> 
+        <a href="upvote?a={{=p['id']}}">  <img src="{{=URL('static','images/up.jpg')}}" width="10" height="10" alt="" />  </a>   
+        
+       <a href="downvote?a={{=p['id']}}">  <img src="{{=URL('static','images/down.jpg')}}" width="10" height="10" alt="" />  </a> 
+        <br/>        
+        <sup>   {{=p['rating']}}  | Posted at: {{=p['tstamp']}}    |   {{=p['category']}}    </sup>
+         
+         {{if p['Youtube'] == 'Yes': }}
+         {{ x=p['link'].split('=') }}
+         <center> <iframe width="420" height="315" src="//www.youtube.com/embed/{{=x[1]}}" frameborder="0" allowfullscreen></iframe> </center>
+         {{pass}}
+         
+        <a href="newcomment?a={{=p['id']}}"><br/> Comment </a>
+        
+        {{ if int(auth.user.id) == int(p['authorID']) : }}
+        
+        <a href="deletepost?a={{=p['id']}}"> Delete </a>
+        <a href="editpost?a={{=p['id']}}"> Edit </a>
+
+        {{pass}}
+        {{ if int(auth.user.id) == 8 : }}
+         
+        <a href="deletepost?a={{=p['id']}}"> Delete </a>
+        <a href="editpost?a={{=p['id']}}"> Edit </a>
+        
+        {{pass}}
+        <br/>
+        {{for c in comments:}}
+        {{if int(p.id) == int(c.postID):}}
+        
+        <sub> <b> {{=c.authname}}  </b>  {{=c.tstamp}}   </sub>  <br/>   <pre>{{=c['body']}}</pre>
+        {{pass}}
+        {{pass}}
+         <br/><hr/>
+{{pass}}
+   
+    </ol>

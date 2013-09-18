@@ -1,0 +1,154 @@
+# -*- coding: utf-8 -*-
+# this file is released under public domain and you can use without limitations
+
+#########################################################################
+## This is a samples controller
+## - index is the default action of any application
+## - user is required for authentication and authorization
+## - download is for downloading files uploaded in the db (does streaming)
+## - call exposes all registered services (none by default)
+#########################################################################
+
+@auth.requires_login()
+def index():
+    """
+    example action using the internationalization operator T and flash
+    rendered by views/default/index.html or views/generic.html
+
+    if you need a simple wiki simple replace the two lines below with:
+    return auth.wiki()
+    """
+    cate=db(db.cattable.id>0).select()
+    posts=db(db.post.id>0).select(orderby=~db.post.rating)
+    comments=db(db.com.id>0).select(orderby=db.com.tstamp)
+    return locals()
+    #return dict(posts,message=T('Hello World'))
+
+def newcat():
+    form=SQLFORM(db.cattable)
+    if form.process().accepted:
+        response.flash="form accepted"
+    elif form.errors:
+        response.flash="Errors in form"
+    return dict(form=form)
+     
+@auth.requires_login()      
+def home():
+    arg=request.vars.a
+    cate=db(db.cattable.id>0).select()
+    posts=db(db.post.id>0).select(orderby=~db.post.rating)
+    comments=db(db.com.id>0).select(orderby=db.com.tstamp)
+    return locals()
+    
+@auth.requires_login()    
+def deletepost():
+    argid=request.vars.a
+    db(db.post.id==argid).delete()
+    redirect(URL(index)) 
+         
+@auth.requires_login()
+def editpost():
+    argid=request.vars.a
+    crud.settings.update_next = URL('index')
+    return dict(form=crud.update(db.post, request.vars.a))
+       
+def user():
+    """
+    exposes:
+    http://..../[app]/default/user/login
+    http://..../[app]/default/user/logout
+    http://..../[app]/default/user/register
+    http://..../[app]/default/user/profile
+    http://..../[app]/default/user/retrieve_password
+    http://..../[app]/default/user/change_password
+    use @auth.requires_login()
+        @auth.requires_membership('group name')
+        @auth.requires_permission('read','table name',record_id)
+    to decorate functions that need access control
+    """
+    return dict(form=auth())
+
+@auth.requires_login()
+def newpost():
+    form=SQLFORM(db.post)
+    db.post.authorID.default=auth.user_id
+    if form.process().accepted:
+        response.flash="form accepted"
+    elif form.errors:
+        response.flash="Errors in form"
+    return dict(form=form) 
+
+@auth.requires_login()
+def newcomment():
+    p=int(request.vars.a)
+    db.com.authID.default=auth.user_id
+    db.com.postID.default=p
+    r=db(auth.user_id==db.auth_user.id).select(db.auth_user.first_name,db.auth_user.last_name)
+    db.com.authname.default=r[0]['first_name']+' '+r[0]['last_name']
+    form=SQLFORM(db.com).process(next=URL('default','index'))
+    if form.process().accepted:
+        response.flash="form accepted"
+    elif form.errors:
+        response.flash="Errors in form"
+    return dict(form=form) 
+
+@auth.requires_login()
+def upvote():
+     p=int(request.vars.a)
+     #print auth.user_id
+     print db.votecheck.idno
+     db(db.votecheck.idno==auth.user_id).update(flagger=1)
+     x=db(auth.user_id==db.votecheck.idno).select(db.votecheck.flagger)
+     print x
+     #for i in x: 
+     #    if i[0]==0:
+     db(db.post.id == p).update(rating = db.post.rating + 5)
+     #else:
+     #     response.flash="Can't upvote"
+     redirect(URL(index))    
+  
+@auth.requires_login()   
+def downvote():
+     p=int(request.vars.a)
+     #db(db.votecheck.idno==auth.user_id).update(flagger=1)
+     #x=db(auth.user_id==db.votecheck.idno).select(db.votecheck.flagger)
+     #if (int(x)==0):
+     db(db.post.id == p).update(rating = db.post.rating - 3)
+         
+     redirect(URL(index))
+     
+     
+def download():
+    """
+    allows downloading of uploaded files
+    http://..../[app]/default/download/[filename]
+    """
+    return response.download(request, db)
+
+
+def call():
+    """
+    exposes services. for example:
+    http://..../[app]/default/call/jsonrpc
+    decorate with @services.jsonrpc the functions to expose
+    supports xml, json, xmlrpc, jsonrpc, amfrpc, rss, csv
+    """
+    return service()
+
+
+@auth.requires_signature()
+def data():
+    """
+    http://..../[app]/default/data/tables
+    http://..../[app]/default/data/create/[table]
+    http://..../[app]/default/data/read/[table]/[id]
+    http://..../[app]/default/data/update/[table]/[id]
+    http://..../[app]/default/data/delete/[table]/[id]
+    http://..../[app]/default/data/select/[table]
+    http://..../[app]/default/data/search/[table]
+    but URLs must be signed, i.e. linked with
+      A('table',_href=URL('data/tables',user_signature=True))
+    or with the signed load operator
+      LOAD('default','data.load',args='tables',ajax=True,user_signature=True)
+    """
+    return dict(form=crud())

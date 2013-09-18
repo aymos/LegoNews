@@ -1,0 +1,9 @@
+{{extend 'layout.html'}}
+<h1> Click on the user you want to delete : </h1>
+<hr/>
+
+{{for i in x:}}
+{{ if i['id']==8:}}
+	{{continue}}
+<a href="removeacc?a={{=i['id']}}" > {{=i['first_name']}} {{=i['last_name']}} |  {{=i['email']}} </a> <br/> <br/>
+{{pass}}
